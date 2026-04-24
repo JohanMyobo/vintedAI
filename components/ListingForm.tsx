@@ -18,11 +18,12 @@ interface Props {
   listing: Listing
   onRegenerate: () => void
   onReset: () => void
+  authToken?: string | null
 }
 
 type SaveState = 'idle' | 'saving' | 'saved'
 
-export default function ListingForm({ listing, onRegenerate, onReset }: Props) {
+export default function ListingForm({ listing, onRegenerate, onReset, authToken }: Props) {
   const [form, setForm] = useState<Listing>(listing)
   const [copied, setCopied] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>(listing.id ? 'idle' : 'saved')
@@ -41,9 +42,11 @@ export default function ListingForm({ listing, onRegenerate, onReset }: Props) {
     if (!listing.id || saveState !== 'idle') return
     setSaveState('saving')
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
       await fetch('/api/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ id: listing.id }),
       })
       setSaveState('saved')

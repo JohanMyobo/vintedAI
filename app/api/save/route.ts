@@ -9,8 +9,16 @@ function getClientIp(req: NextRequest): string {
   )
 }
 
+async function getUserId(req: NextRequest): Promise<string | null> {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
+  if (!token) return null
+  const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+  return user?.id ?? null
+}
+
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
+  const userId = await getUserId(req)
 
   let body: { id: string }
   try {
@@ -24,12 +32,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
   }
 
-  // Only allow saving listings that belong to this IP
-  const { error } = await supabaseAdmin
+  // Match by user_id if logged in, otherwise by IP
+  const query = supabaseAdmin
     .from('listings')
     .update({ saved: true })
     .eq('id', id)
-    .eq('ip', ip)
+
+  const { error } = userId
+    ? await query.eq('user_id', userId)
+    : await query.eq('ip', ip)
 
   if (error) {
     console.error('Save error:', error)

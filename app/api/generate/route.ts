@@ -60,16 +60,26 @@ ${examples}
 ---`
 }
 
-async function getSavedExamples(ip: string) {
-  const { data } = await supabaseAdmin
+async function getSavedExamples(userId: string | null, ip: string) {
+  const query = supabaseAdmin
     .from('listings')
     .select('titre, description, prix_suggere')
-    .eq('ip', ip)
     .eq('saved', true)
     .order('created_at', { ascending: false })
     .limit(3)
 
+  const { data } = userId
+    ? await query.eq('user_id', userId)
+    : await query.eq('ip', ip)
+
   return data ?? []
+}
+
+async function getUserId(req: NextRequest): Promise<string | null> {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
+  if (!token) return null
+  const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+  return user?.id ?? null
 }
 
 function getClientIp(req: NextRequest): string {
@@ -82,6 +92,7 @@ function getClientIp(req: NextRequest): string {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
+  const userId = await getUserId(req)
 
   const { allowed, retryAfterMs } = await checkRateLimit(ip)
   if (!allowed) {
@@ -115,7 +126,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Fetch saved examples to personalize prompt
-  const savedExamples = await getSavedExamples(ip)
+  const savedExamples = await getSavedExamples(userId, ip)
   const prompt = buildPrompt(savedExamples)
 
   const imageBlocks: Anthropic.ImageBlockParam[] = images.map((base64) => ({
@@ -162,10 +173,9 @@ export async function POST(req: NextRequest) {
     prix_suggere: Math.max(1, Math.round(Number(listing.prix_suggere) || 10)),
   }
 
-  // Insert listing and get its ID back to return to client
   const { data: inserted } = await supabaseAdmin
     .from('listings')
-    .insert({ ip, ...result })
+    .insert({ ip, user_id: userId ?? undefined, ...result })
     .select('id')
     .single()
 

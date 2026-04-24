@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import PhotoUploader from '@/components/PhotoUploader'
 import ListingForm from '@/components/ListingForm'
 import RateLimitBanner from '@/components/RateLimitBanner'
+import AuthButton from '@/components/AuthButton'
 import { Listing } from '@/lib/formatListing'
+import { getSupabaseBrowser } from '@/lib/supabaseBrowser'
 
 type AppState = 'upload' | 'loading' | 'result'
 
@@ -19,6 +21,18 @@ export default function Home() {
   const [photos, setPhotos] = useState<string[]>([])
   const [error, setError] = useState<GenerateError | null>(null)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const [authToken, setAuthToken] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowser()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthToken(session?.access_token ?? null)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setAuthToken(session?.access_token ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   const generate = useCallback(async (images: string[]) => {
     setPhotos(images)
@@ -29,9 +43,12 @@ export default function Home() {
     setAbortController(ac)
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
+
       const res = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ images }),
         signal: ac.signal,
       })
@@ -84,7 +101,7 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-b from-[#1D9E75]/5 to-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#1D9E75] flex items-center justify-center text-white text-lg font-bold shadow">
             V
           </div>
@@ -92,6 +109,7 @@ export default function Home() {
             <h1 className="text-lg font-bold text-gray-900 leading-none">VintedAI</h1>
             <p className="text-xs text-gray-500">Génère tes annonces en 1 clic</p>
           </div>
+          <AuthButton />
         </div>
       </header>
 
@@ -141,6 +159,7 @@ export default function Home() {
               listing={listing}
               onRegenerate={handleRegenerate}
               onReset={handleReset}
+              authToken={authToken}
             />
           )}
         </div>
