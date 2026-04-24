@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VintedAI
 
-## Getting Started
+Génère des annonces Vinted parfaites à partir de photos, grâce à Claude Sonnet (Anthropic).
 
-First, run the development server:
+## Stack
+
+- Next.js 14 App Router + TypeScript
+- Tailwind CSS
+- Supabase (rate limiting + historique)
+- API Anthropic (claude-sonnet-4-5)
+
+## Setup
+
+### 1. Supabase
+
+1. Crée un projet sur [supabase.com](https://supabase.com)
+2. Dans l'éditeur SQL, exécute le contenu de `supabase/schema.sql`
+3. Récupère tes clés dans **Settings > API**
+
+### 2. Variables d'environnement
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Remplis `.env.local` avec :
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Où la trouver |
+|---|---|
+| `ANTHROPIC_API_KEY` | console.anthropic.com |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase > Settings > API > Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase > Settings > API > anon public |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase > Settings > API > service_role secret |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Lancer en local
 
-## Learn More
+```bash
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Ouvre http://localhost:3000
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 4. Déploiement Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npx vercel
+```
 
-## Deploy on Vercel
+Ajoute les 4 variables d'env dans le dashboard Vercel (Settings > Environment Variables).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Fonctionnement
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Upload jusqu'à 5 photos (JPEG/PNG/WebP)
+2. Les images > 1MB sont compressées automatiquement côté client
+3. L'API `/api/generate` appelle Claude Sonnet avec les photos
+4. Le résultat est affiché dans un formulaire éditable
+5. Copie l'annonce formatée en un clic
+
+## Rate limiting
+
+5 générations par heure par IP, stockées dans la table `generations` Supabase.
