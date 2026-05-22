@@ -19,14 +19,17 @@ interface Props {
   onRegenerate: () => void
   onReset: () => void
   authToken?: string | null
+  firstPhoto?: string | null
 }
 
 type SaveState = 'idle' | 'saving' | 'saved'
+type DashboardState = 'idle' | 'adding' | 'added'
 
-export default function ListingForm({ listing, onRegenerate, onReset, authToken }: Props) {
+export default function ListingForm({ listing, onRegenerate, onReset, authToken, firstPhoto }: Props) {
   const [form, setForm] = useState<Listing>(listing)
   const [copied, setCopied] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>(listing.id ? 'idle' : 'saved')
+  const [dashboardState, setDashboardState] = useState<DashboardState>('idle')
 
   const set = (field: keyof Listing) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -52,6 +55,36 @@ export default function ListingForm({ listing, onRegenerate, onReset, authToken 
       setSaveState('saved')
     } catch {
       setSaveState('idle')
+    }
+  }
+
+  const handleAddToDashboard = async () => {
+    if (!authToken || dashboardState !== 'idle' || !listing.id) return
+    setDashboardState('adding')
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      }
+      await fetch('/api/annonces', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          generated_listing_id: listing.id,
+          titre: form.titre,
+          description: form.description,
+          marque: form.marque,
+          categorie: form.categorie,
+          taille: form.taille,
+          etat: form.etat,
+          couleur: form.couleur,
+          prix_suggere: form.prix_suggere,
+          photo_base64: firstPhoto ?? null,
+        }),
+      })
+      setDashboardState('added')
+    } catch {
+      setDashboardState('idle')
     }
   }
 
@@ -215,6 +248,27 @@ export default function ListingForm({ listing, onRegenerate, onReset, authToken 
         <p className="text-xs text-center text-gray-400">
           ✨ Ce style sera utilisé pour personnaliser tes prochaines annonces
         </p>
+      )}
+
+      {/* Ajouter au dashboard */}
+      {authToken && listing.id && (
+        <button
+          onClick={handleAddToDashboard}
+          disabled={dashboardState !== 'idle'}
+          className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 border ${
+            dashboardState === 'added'
+              ? 'bg-[#1D9E75]/10 border-[#1D9E75] text-[#1D9E75] cursor-default'
+              : dashboardState === 'adding'
+              ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-wait'
+              : 'bg-white border-[#1D9E75] text-[#1D9E75] hover:bg-[#1D9E75]/5 active:scale-[0.99]'
+          }`}
+        >
+          {dashboardState === 'added'
+            ? '✓ Ajoutée au dashboard'
+            : dashboardState === 'adding'
+            ? 'Ajout en cours...'
+            : '📋 Ajouter au dashboard'}
+        </button>
       )}
     </div>
   )

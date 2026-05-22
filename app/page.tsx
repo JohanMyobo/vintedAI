@@ -160,6 +160,7 @@ export default function Home() {
               onRegenerate={handleRegenerate}
               onReset={handleReset}
               authToken={authToken}
+              firstPhoto={photos[0] ?? null}
             />
           )}
         </div>

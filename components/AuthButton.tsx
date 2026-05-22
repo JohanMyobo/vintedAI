@@ -42,10 +42,16 @@ export default function AuthButton() {
     return (
       <div className="flex items-center gap-3">
         <Link
-          href="/saved"
+          href="/dashboard"
           className="text-sm text-[#1D9E75] font-medium hover:underline"
         >
-          Mes annonces
+          Dashboard
+        </Link>
+        <Link
+          href="/saved"
+          className="text-sm text-gray-500 hover:text-[#1D9E75] transition-colors"
+        >
+          Sauvegardés
         </Link>
         <button
           onClick={handleLogout}
