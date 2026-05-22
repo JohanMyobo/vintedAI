@@ -18,14 +18,14 @@ interface Props {
   listing: Listing
   onRegenerate: () => void
   onReset: () => void
-  authToken?: string | null
+  isSignedIn?: boolean
   firstPhoto?: string | null
 }
 
 type SaveState = 'idle' | 'saving' | 'saved'
 type DashboardState = 'idle' | 'adding' | 'added'
 
-export default function ListingForm({ listing, onRegenerate, onReset, authToken, firstPhoto }: Props) {
+export default function ListingForm({ listing, onRegenerate, onReset, isSignedIn, firstPhoto }: Props) {
   const [form, setForm] = useState<Listing>(listing)
   const [copied, setCopied] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>(listing.id ? 'idle' : 'saved')
@@ -45,11 +45,9 @@ export default function ListingForm({ listing, onRegenerate, onReset, authToken,
     if (!listing.id || saveState !== 'idle') return
     setSaveState('saving')
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
       await fetch('/api/save', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: listing.id }),
       })
       setSaveState('saved')
@@ -59,16 +57,12 @@ export default function ListingForm({ listing, onRegenerate, onReset, authToken,
   }
 
   const handleAddToDashboard = async () => {
-    if (!authToken || dashboardState !== 'idle' || !listing.id) return
+    if (!isSignedIn || dashboardState !== 'idle' || !listing.id) return
     setDashboardState('adding')
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`,
-      }
       await fetch('/api/annonces', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           generated_listing_id: listing.id,
           titre: form.titre,
@@ -251,7 +245,7 @@ export default function ListingForm({ listing, onRegenerate, onReset, authToken,
       )}
 
       {/* Ajouter au dashboard */}
-      {authToken && listing.id && (
+      {isSignedIn && listing.id && (
         <button
           onClick={handleAddToDashboard}
           disabled={dashboardState !== 'idle'}

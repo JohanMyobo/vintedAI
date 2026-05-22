@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { auth } from '@clerk/nextjs/server'
 import { checkRateLimit, recordGeneration } from '@/lib/ratelimit'
-import { supabaseAdmin } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -46,90 +47,60 @@ Retourne ce JSON :
 
 function buildPrompt(savedExamples: { titre: string; description: string; prix_suggere: number }[]): string {
   if (savedExamples.length === 0) return BASE_PROMPT
-
   const examples = savedExamples
     .map((e, i) => `Exemple ${i + 1} :\nTitre : ${e.titre}\nDescription : ${e.description}\nPrix : ${e.prix_suggere}€`)
     .join('\n\n')
-
-  return `${BASE_PROMPT}
-
----
-Cet utilisateur a sauvegardé des annonces qu'il a aimées. Inspire-toi de leur ton, style et niveau de détail :
-
-${examples}
----`
+  return `${BASE_PROMPT}\n\n---\nCet utilisateur a sauvegardé des annonces qu'il a aimées. Inspire-toi de leur ton, style et niveau de détail :\n\n${examples}\n---`
 }
 
 async function getSavedExamples(userId: string | null, ip: string) {
-  const query = supabaseAdmin
-    .from('listings')
-    .select('titre, description, prix_suggere')
-    .eq('saved', true)
-    .order('created_at', { ascending: false })
-    .limit(3)
-
-  const { data } = userId
-    ? await query.eq('user_id', userId)
-    : await query.eq('ip', ip)
-
-  return data ?? []
-}
-
-async function getUserId(req: NextRequest): Promise<string | null> {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return null
-  const { data: { user } } = await supabaseAdmin.auth.getUser(token)
-  return user?.id ?? null
+  try {
+    if (userId) {
+      return await sql`
+        SELECT titre, description, prix_suggere FROM listings
+        WHERE user_id = ${userId} AND saved = true
+        ORDER BY created_at DESC LIMIT 3
+      `
+    }
+    return await sql`
+      SELECT titre, description, prix_suggere FROM listings
+      WHERE ip = ${ip} AND saved = true
+      ORDER BY created_at DESC LIMIT 3
+    `
+  } catch { return [] }
 }
 
 function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    req.headers.get('x-real-ip') ??
-    '127.0.0.1'
-  )
+  return req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? '127.0.0.1'
 }
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
-  const userId = await getUserId(req)
+  const { userId } = await auth()
 
   const { allowed, retryAfterMs } = await checkRateLimit(ip)
   if (!allowed) {
-    return NextResponse.json(
-      { error: "Limite de 5 générations/heure atteinte", retryAfterMs },
-      { status: 429 }
-    )
+    return NextResponse.json({ error: 'Limite de 5 générations/heure atteinte', retryAfterMs }, { status: 429 })
   }
 
   let body: { images: string[] }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 })
-  }
+  try { body = await req.json() }
+  catch { return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 }) }
 
   const { images } = body
-  if (!Array.isArray(images) || images.length === 0) {
+  if (!Array.isArray(images) || images.length === 0)
     return NextResponse.json({ error: 'Au moins une image est requise' }, { status: 400 })
-  }
-  if (images.length > MAX_IMAGES) {
+  if (images.length > MAX_IMAGES)
     return NextResponse.json({ error: `Maximum ${MAX_IMAGES} images autorisées` }, { status: 400 })
-  }
   for (const img of images) {
-    if (typeof img !== 'string') {
-      return NextResponse.json({ error: 'Format image invalide' }, { status: 400 })
-    }
-    if (img.length * 0.75 > MAX_IMAGE_BYTES) {
-      return NextResponse.json({ error: 'Photo trop volumineuse (max 5MB par image)' }, { status: 400 })
-    }
+    if (typeof img !== 'string') return NextResponse.json({ error: 'Format image invalide' }, { status: 400 })
+    if (img.length * 0.75 > MAX_IMAGE_BYTES) return NextResponse.json({ error: 'Photo trop volumineuse (max 5MB par image)' }, { status: 400 })
   }
 
-  // Fetch saved examples to personalize prompt
   const savedExamples = await getSavedExamples(userId, ip)
-  const prompt = buildPrompt(savedExamples)
+  const prompt = buildPrompt(savedExamples as { titre: string; description: string; prix_suggere: number }[])
 
-  const imageBlocks: Anthropic.ImageBlockParam[] = images.map((base64) => ({
+  const imageBlocks: Anthropic.ImageBlockParam[] = images.map(base64 => ({
     type: 'image',
     source: { type: 'base64', media_type: 'image/jpeg', data: base64 },
   }))
@@ -139,12 +110,7 @@ export async function POST(req: NextRequest) {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-5',
       max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [...imageBlocks, { type: 'text', text: prompt }],
-        },
-      ],
+      messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: prompt }] }],
     })
     rawText = message.content[0].type === 'text' ? message.content[0].text : ''
   } catch (err) {
@@ -155,10 +121,9 @@ export async function POST(req: NextRequest) {
   let listing: Record<string, unknown>
   try {
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('No JSON found')
+    if (!jsonMatch) throw new Error('No JSON')
     listing = JSON.parse(jsonMatch[0])
   } catch {
-    console.error('JSON parse error, raw:', rawText)
     return NextResponse.json({ error: 'Génération échouée — JSON invalide' }, { status: 422 })
   }
 
@@ -173,17 +138,17 @@ export async function POST(req: NextRequest) {
     prix_suggere: Math.max(1, Math.round(Number(listing.prix_suggere) || 10)),
   }
 
-  const { data: inserted } = await supabaseAdmin
-    .from('listings')
-    .insert({ ip, user_id: userId ?? undefined, ...result })
-    .select('id')
-    .single()
-
+  const inserted = await sql`
+    INSERT INTO listings (ip, user_id, titre, description, marque, categorie, taille, etat, couleur, prix_suggere)
+    VALUES (${ip}, ${userId ?? null}, ${result.titre}, ${result.description}, ${result.marque},
+            ${result.categorie}, ${result.taille}, ${result.etat}, ${result.couleur}, ${result.prix_suggere})
+    RETURNING id
+  `
   await recordGeneration(ip)
 
   return NextResponse.json({
     ...result,
-    id: inserted?.id ?? null,
+    id: inserted[0]?.id ?? null,
     personalised: savedExamples.length > 0,
   })
 }

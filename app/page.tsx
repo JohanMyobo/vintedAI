@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
+import { useUser } from '@clerk/nextjs'
 import PhotoUploader from '@/components/PhotoUploader'
 import ListingForm from '@/components/ListingForm'
 import RateLimitBanner from '@/components/RateLimitBanner'
 import AuthButton from '@/components/AuthButton'
 import { Listing } from '@/lib/formatListing'
-import { getSupabaseBrowser } from '@/lib/supabaseBrowser'
 
 type AppState = 'upload' | 'loading' | 'result'
 
@@ -16,23 +16,12 @@ interface GenerateError {
 }
 
 export default function Home() {
+  const { isSignedIn } = useUser()
   const [state, setState] = useState<AppState>('upload')
   const [listing, setListing] = useState<Listing | null>(null)
   const [photos, setPhotos] = useState<string[]>([])
   const [error, setError] = useState<GenerateError | null>(null)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
-  const [authToken, setAuthToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    const supabase = getSupabaseBrowser()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthToken(session?.access_token ?? null)
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setAuthToken(session?.access_token ?? null)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   const generate = useCallback(async (images: string[]) => {
     setPhotos(images)
@@ -43,12 +32,9 @@ export default function Home() {
     setAbortController(ac)
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
-
       const res = await fetch('/api/generate', {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images }),
         signal: ac.signal,
       })
@@ -72,10 +58,7 @@ export default function Home() {
       setListing(data)
       setState('result')
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        setState('upload')
-        return
-      }
+      if (err instanceof Error && err.name === 'AbortError') { setState('upload'); return }
       setError({ message: 'Problème de connexion, réessaie' })
       setState('upload')
     } finally {
@@ -83,44 +66,29 @@ export default function Home() {
     }
   }, [])
 
-  const handleCancel = () => {
-    abortController?.abort()
-    setState('upload')
-  }
-
+  const handleCancel = () => { abortController?.abort(); setState('upload') }
   const handleRegenerate = () => generate(photos)
-
-  const handleReset = () => {
-    setListing(null)
-    setPhotos([])
-    setError(null)
-    setState('upload')
-  }
+  const handleReset = () => { setListing(null); setPhotos([]); setError(null); setState('upload') }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#1D9E75]/5 to-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#1D9E75] flex items-center justify-center text-white text-lg font-bold shadow">
-            V
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900 leading-none">VintedAI</h1>
-            <p className="text-xs text-gray-500">Génère tes annonces en 1 clic</p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1D9E75] flex items-center justify-center text-white text-lg font-bold shadow">V</div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 leading-none">VintedAI</h1>
+              <p className="text-xs text-gray-500">Génère tes annonces en 1 clic</p>
+            </div>
           </div>
           <AuthButton />
         </div>
       </header>
 
-      {/* Content */}
       <div className="max-w-2xl mx-auto px-4 py-8">
         {error?.retryAfterMs != null && (
           <div className="mb-6">
-            <RateLimitBanner
-              retryAfterMs={error.retryAfterMs}
-              onExpire={() => setError(null)}
-            />
+            <RateLimitBanner retryAfterMs={error.retryAfterMs} onExpire={() => setError(null)} />
           </div>
         )}
 
@@ -137,18 +105,13 @@ export default function Home() {
             <div className="flex flex-col items-center justify-center py-16 space-y-5">
               <div className="relative">
                 <div className="w-16 h-16 rounded-full border-4 border-[#1D9E75]/20 border-t-[#1D9E75] animate-spin" />
-                <div className="absolute inset-0 flex items-center justify-center text-2xl">
-                  🤖
-                </div>
+                <div className="absolute inset-0 flex items-center justify-center text-2xl">🤖</div>
               </div>
               <div className="text-center">
                 <p className="font-semibold text-gray-800">Analyse en cours...</p>
                 <p className="text-sm text-gray-500 mt-1">L&apos;IA examine tes photos</p>
               </div>
-              <button
-                onClick={handleCancel}
-                className="px-5 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
+              <button onClick={handleCancel} className="px-5 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">
                 Annuler
               </button>
             </div>
@@ -159,7 +122,7 @@ export default function Home() {
               listing={listing}
               onRegenerate={handleRegenerate}
               onReset={handleReset}
-              authToken={authToken}
+              isSignedIn={!!isSignedIn}
               firstPhoto={photos[0] ?? null}
             />
           )}

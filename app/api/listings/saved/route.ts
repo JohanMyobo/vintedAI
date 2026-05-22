@@ -1,21 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
+import { sql } from '@/lib/db'
 
-export async function GET(req: NextRequest) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+export async function GET() {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
 
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  if (authError || !user) return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
-
-  const { data, error } = await supabaseAdmin
-    .from('listings')
-    .select('id, titre, description, marque, categorie, taille, etat, couleur, prix_suggere, created_at')
-    .eq('user_id', user.id)
-    .eq('saved', true)
-    .order('created_at', { ascending: false })
-
-  if (error) return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
-
+  const data = await sql`
+    SELECT id, titre, description, marque, categorie, taille, etat, couleur, prix_suggere, created_at
+    FROM listings
+    WHERE user_id = ${userId} AND saved = true
+    ORDER BY created_at DESC
+  `
   return NextResponse.json(data)
 }

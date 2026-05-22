@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.0",
-    "@supabase/supabase-js": "^2.104.1",
+    "@clerk/nextjs": "^5.7.6",
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/blob": "^2.4.0",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18"
