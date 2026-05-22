@@ -153,22 +153,22 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
       {/* Modal détail */}
       {showDetail && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+          className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-6"
           onClick={() => setShowDetail(false)}
         >
           <div
-            className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+            className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] sm:max-h-[85vh] flex flex-col sm:flex-row"
             onClick={e => e.stopPropagation()}
           >
-            {/* Photo grande */}
+            {/* Photo grande — colonne gauche sur desktop */}
             {annonce.photo_url && (
-              <div className="w-full aspect-[4/3] bg-gray-100 flex-shrink-0">
+              <div className="w-full sm:w-2/5 aspect-[4/3] sm:aspect-auto bg-gray-100 flex-shrink-0">
                 <img src={annonce.photo_url} alt={annonce.titre} className="w-full h-full object-cover" />
               </div>
             )}
 
             {/* Contenu scrollable */}
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="flex-1 overflow-y-auto p-6">
               {/* Header */}
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex-1 min-w-0">
