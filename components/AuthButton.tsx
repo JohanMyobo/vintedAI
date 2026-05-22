@@ -4,7 +4,7 @@ import { useUser, SignInButton, SignOutButton } from '@clerk/nextjs'
 import Link from 'next/link'
 
 export default function AuthButton() {
-  const { isSignedIn, user, isLoaded } = useUser()
+  const { isSignedIn, isLoaded } = useUser()
 
   if (!isLoaded) return null
 
