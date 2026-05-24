@@ -60,14 +60,14 @@ export default function DashboardStats({ annonces }: Props) {
   return (
     <div className="mb-6 space-y-3">
       {/* Chiffres globaux */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {stats.map(stat => (
-          <div key={stat.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">{stat.icon}</span>
-              <span className="text-xs text-gray-500">{stat.label}</span>
+          <div key={stat.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-sm">{stat.icon}</span>
+              <span className="text-xs text-gray-500 truncate">{stat.label}</span>
             </div>
-            <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+            <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
       </div>

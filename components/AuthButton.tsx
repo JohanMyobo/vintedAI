@@ -10,16 +10,16 @@ export default function AuthButton() {
 
   if (isSignedIn) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <Link href="/dashboard" className="text-sm text-[#1D9E75] font-medium hover:underline">
           Dashboard
         </Link>
-        <Link href="/saved" className="text-sm text-gray-500 hover:text-[#1D9E75] transition-colors">
+        <Link href="/saved" className="hidden sm:block text-sm text-gray-500 hover:text-[#1D9E75] transition-colors">
           Sauvegardés
         </Link>
         <SignOutButton>
-          <button className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-            Déconnexion
+          <button className="text-xs sm:text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            Déco
           </button>
         </SignOutButton>
       </div>
