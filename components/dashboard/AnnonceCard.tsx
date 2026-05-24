@@ -15,6 +15,7 @@ export interface Annonce {
   prix_vente?: number | null
   statut: 'active' | 'vendue' | 'reservee' | 'archivee'
   photo_url?: string | null
+  vinted_url?: string | null
   created_at: string
   sold_at?: string | null
 }
@@ -45,6 +46,7 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
   const [editTitre, setEditTitre] = useState(annonce.titre)
   const [editDescription, setEditDescription] = useState(annonce.description ?? '')
   const [editPrix, setEditPrix] = useState(String(annonce.prix_suggere))
+  const [editVintedUrl, setEditVintedUrl] = useState(annonce.vinted_url ?? '')
 
   const statut = STATUT_LABELS[annonce.statut]
 
@@ -80,6 +82,7 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
     setEditTitre(annonce.titre)
     setEditDescription(annonce.description ?? '')
     setEditPrix(String(annonce.prix_suggere))
+    setEditVintedUrl(annonce.vinted_url ?? '')
     setEditing(true)
   }
 
@@ -91,6 +94,7 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
       titre: editTitre,
       description: editDescription,
       prix_suggere: Number(editPrix),
+      vinted_url: editVintedUrl || null,
     })
     setSaving(false)
     setEditing(false)
@@ -221,6 +225,17 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
                       ))}
                   </div>
 
+                  {annonce.vinted_url && (
+                    <a
+                      href={annonce.vinted_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-[#1D9E75] font-medium hover:underline mb-4"
+                    >
+                      <span>🔗</span> Voir sur Vinted
+                    </a>
+                  )}
+
                   {annonce.description && (
                     <div className="mb-5">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Description</p>
@@ -281,6 +296,17 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">€</span>
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Lien Vinted</label>
+                      <input
+                        type="url"
+                        value={editVintedUrl}
+                        onChange={e => setEditVintedUrl(e.target.value)}
+                        placeholder="https://www.vinted.fr/items/..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent outline-none"
+                      />
                     </div>
                   </div>
 
