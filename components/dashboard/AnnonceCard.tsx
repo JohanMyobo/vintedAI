@@ -16,6 +16,7 @@ export interface Annonce {
   statut: 'active' | 'vendue' | 'reservee' | 'archivee'
   photo_url?: string | null
   vinted_url?: string | null
+  note?: string | null
   created_at: string
   sold_at?: string | null
 }
@@ -47,6 +48,7 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
   const [editDescription, setEditDescription] = useState(annonce.description ?? '')
   const [editPrix, setEditPrix] = useState(String(annonce.prix_suggere))
   const [editVintedUrl, setEditVintedUrl] = useState(annonce.vinted_url ?? '')
+  const [editNote, setEditNote] = useState(annonce.note ?? '')
 
   const statut = STATUT_LABELS[annonce.statut]
 
@@ -83,6 +85,7 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
     setEditDescription(annonce.description ?? '')
     setEditPrix(String(annonce.prix_suggere))
     setEditVintedUrl(annonce.vinted_url ?? '')
+    setEditNote(annonce.note ?? '')
     setEditing(true)
   }
 
@@ -95,6 +98,7 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
       description: editDescription,
       prix_suggere: Number(editPrix),
       vinted_url: editVintedUrl || null,
+      note: editNote || null,
     })
     setSaving(false)
     setEditing(false)
@@ -236,6 +240,13 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
                     </a>
                   )}
 
+                  {annonce.note && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex gap-2">
+                      <span className="text-base flex-shrink-0">📝</span>
+                      <p className="text-sm text-amber-800 whitespace-pre-line leading-relaxed">{annonce.note}</p>
+                    </div>
+                  )}
+
                   {annonce.description && (
                     <div className="mb-5">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Description</p>
@@ -306,6 +317,17 @@ export default function AnnonceCard({ annonce, onUpdate, onDelete }: Props) {
                         onChange={e => setEditVintedUrl(e.target.value)}
                         placeholder="https://www.vinted.fr/items/..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Note privée</label>
+                      <textarea
+                        value={editNote}
+                        onChange={e => setEditNote(e.target.value)}
+                        rows={3}
+                        placeholder="Ex : négociation possible, posté le 22/05…"
+                        className="w-full px-3 py-2 border border-amber-200 bg-amber-50 rounded-lg text-sm focus:ring-2 focus:ring-amber-300 focus:border-transparent outline-none resize-none placeholder-amber-300"
                       />
                     </div>
                   </div>
