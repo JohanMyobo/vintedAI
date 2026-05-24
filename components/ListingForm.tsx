@@ -18,6 +18,7 @@ interface Props {
   listing: Listing
   onRegenerate: () => void
   onReset: () => void
+  onAddedToDashboard?: () => void
   isSignedIn?: boolean
   firstPhoto?: string | null
 }
@@ -25,7 +26,7 @@ interface Props {
 type SaveState = 'idle' | 'saving' | 'saved'
 type DashboardState = 'idle' | 'adding' | 'added'
 
-export default function ListingForm({ listing, onRegenerate, onReset, isSignedIn, firstPhoto }: Props) {
+export default function ListingForm({ listing, onRegenerate, onReset, onAddedToDashboard, isSignedIn, firstPhoto }: Props) {
   const [form, setForm] = useState<Listing>(listing)
   const [copied, setCopied] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>(listing.id ? 'idle' : 'saved')
@@ -77,6 +78,7 @@ export default function ListingForm({ listing, onRegenerate, onReset, isSignedIn
         }),
       })
       setDashboardState('added')
+      onAddedToDashboard?.()
     } catch {
       setDashboardState('idle')
     }
@@ -245,24 +247,34 @@ export default function ListingForm({ listing, onRegenerate, onReset, isSignedIn
       )}
 
       {/* Ajouter au dashboard */}
-      {isSignedIn && listing.id && (
+      {isSignedIn && listing.id && dashboardState !== 'added' && (
         <button
           onClick={handleAddToDashboard}
           disabled={dashboardState !== 'idle'}
           className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 border ${
-            dashboardState === 'added'
-              ? 'bg-[#1D9E75]/10 border-[#1D9E75] text-[#1D9E75] cursor-default'
-              : dashboardState === 'adding'
+            dashboardState === 'adding'
               ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-wait'
               : 'bg-white border-[#1D9E75] text-[#1D9E75] hover:bg-[#1D9E75]/5 active:scale-[0.99]'
           }`}
         >
-          {dashboardState === 'added'
-            ? '✓ Ajoutée au dashboard'
-            : dashboardState === 'adding'
-            ? 'Ajout en cours...'
-            : '📋 Ajouter au dashboard'}
+          {dashboardState === 'adding' ? 'Ajout en cours...' : '📋 Ajouter au dashboard'}
         </button>
+      )}
+
+      {/* Article suivant — affiché après ajout au dashboard */}
+      {dashboardState === 'added' && (
+        <div className="rounded-2xl border border-[#1D9E75]/30 bg-[#1D9E75]/5 p-4 flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2 text-[#1D9E75]">
+            <span className="text-lg">✓</span>
+            <p className="font-semibold text-sm">Ajoutée au dashboard !</p>
+          </div>
+          <button
+            onClick={onReset}
+            className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold hover:bg-[#178a64] transition-colors active:scale-[0.99]"
+          >
+            📦 Article suivant
+          </button>
+        </div>
       )}
     </div>
   )

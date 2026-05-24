@@ -22,6 +22,7 @@ export default function Home() {
   const [photos, setPhotos] = useState<string[]>([])
   const [error, setError] = useState<GenerateError | null>(null)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const [sessionCount, setSessionCount] = useState(0)
 
   const generate = useCallback(async (images: string[]) => {
     setPhotos(images)
@@ -69,6 +70,7 @@ export default function Home() {
   const handleCancel = () => { abortController?.abort(); setState('upload') }
   const handleRegenerate = () => generate(photos)
   const handleReset = () => { setListing(null); setPhotos([]); setError(null); setState('upload') }
+  const handleAddedToDashboard = () => setSessionCount(c => c + 1)
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#1D9E75]/5 to-gray-50">
@@ -78,7 +80,10 @@ export default function Home() {
             <div className="w-9 h-9 rounded-xl bg-[#1D9E75] flex items-center justify-center text-white text-lg font-bold shadow">V</div>
             <div>
               <h1 className="text-lg font-bold text-gray-900 leading-none">VintedAI</h1>
-              <p className="text-xs text-gray-500">Génère tes annonces en 1 clic</p>
+              {sessionCount > 0
+                ? <p className="text-xs text-[#1D9E75] font-medium">{sessionCount} article{sessionCount > 1 ? 's' : ''} ajouté{sessionCount > 1 ? 's' : ''} ✓</p>
+                : <p className="text-xs text-gray-500">Génère tes annonces en 1 clic</p>
+              }
             </div>
           </div>
           <AuthButton />
@@ -122,6 +127,7 @@ export default function Home() {
               listing={listing}
               onRegenerate={handleRegenerate}
               onReset={handleReset}
+              onAddedToDashboard={handleAddedToDashboard}
               isSignedIn={!!isSignedIn}
               firstPhoto={photos[0] ?? null}
             />
