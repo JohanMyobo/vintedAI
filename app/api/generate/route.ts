@@ -74,13 +74,21 @@ function getClientIp(req: NextRequest): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? '127.0.0.1'
 }
 
+const WHITELIST = new Set(
+  (process.env.RATE_LIMIT_WHITELIST ?? '').split(',').map(s => s.trim()).filter(Boolean)
+)
+
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
   const { userId } = await auth()
 
-  const { allowed, retryAfterMs } = await checkRateLimit(ip)
-  if (!allowed) {
-    return NextResponse.json({ error: 'Limite de 5 générations/heure atteinte', retryAfterMs }, { status: 429 })
+  const isWhitelisted = !!userId && WHITELIST.has(userId)
+
+  if (!isWhitelisted) {
+    const { allowed, retryAfterMs } = await checkRateLimit(ip)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Limite de 5 générations/heure atteinte', retryAfterMs }, { status: 429 })
+    }
   }
 
   let body: { images: string[] }
