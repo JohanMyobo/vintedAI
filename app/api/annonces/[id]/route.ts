@@ -6,7 +6,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
 
-  let body: { statut?: string; prix_vente?: number; titre?: string; prix_suggere?: number }
+  let body: { statut?: string; prix_vente?: number; titre?: string; description?: string; prix_suggere?: number }
   try { body = await req.json() }
   catch { return NextResponse.json({ error: 'Corps invalide' }, { status: 400 }) }
 
@@ -17,6 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       statut = COALESCE(${body.statut ?? null}, statut),
       prix_vente = COALESCE(${body.prix_vente ?? null}, prix_vente),
       titre = COALESCE(${body.titre ?? null}, titre),
+      description = COALESCE(${body.description ?? null}, description),
       prix_suggere = COALESCE(${body.prix_suggere ?? null}, prix_suggere),
       sold_at = CASE WHEN ${body.statut ?? null} = 'vendue' THEN ${soldAt}
                      WHEN ${body.statut ?? null} IS NOT NULL THEN NULL
