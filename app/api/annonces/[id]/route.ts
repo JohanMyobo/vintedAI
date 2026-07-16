@@ -21,8 +21,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       prix_suggere = COALESCE(${body.prix_suggere ?? null}, prix_suggere),
       vinted_url = COALESCE(${body.vinted_url ?? null}, vinted_url),
       note = COALESCE(${body.note ?? null}, note),
-      sold_at = CASE WHEN ${body.statut ?? null} = 'vendue' THEN ${soldAt}
-                     WHEN ${body.statut ?? null} IS NOT NULL THEN NULL
+      sold_at = CASE WHEN ${body.statut ?? null}::text = 'vendue' THEN ${soldAt}
+                     WHEN ${body.statut ?? null}::text IS NOT NULL THEN NULL
                      ELSE sold_at END
     WHERE id = ${params.id} AND user_id = ${userId}
     RETURNING *
